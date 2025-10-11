@@ -2,6 +2,7 @@
 name = "sbpf-linker"
 edition = "2024"
 version = "0.1.1"
+authors = ["Claire Fan <claire@blueshift.gg>"]
 license = "MIT"
 
 [lib]
