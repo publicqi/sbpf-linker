@@ -10,7 +10,7 @@ crate-type = ["cdylib", "lib"]
 name = "sbpf_linker"
 
 [dependencies]
-sbpf-assembler = { git = "https://github.com/blueshift-gg/sbpf.git" }
+sbpf-assembler = { version = "0.1.1" }
 clap = { version = "4.5.13", features = ["derive"] }
 object = "0.37.3"
 anyhow = "1.0"
