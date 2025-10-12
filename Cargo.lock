@@ -811,8 +811,9 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sbpf-assembler"
-version = "0.1.1"
-source = "git+https://github.com/blueshift-gg/sbpf#3c72837b7e0626d215864be4ced1d80749b516d5"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe35fff08463e7e57b675d7cbf4fe103f84195246a0660d120fa81ccc1ed4eb3"
 dependencies = [
  "anyhow",
  "num-derive",
