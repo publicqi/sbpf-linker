@@ -20,6 +20,26 @@ pub enum SbpfLinkerError {
     BuildProgramError { errors: Vec<CompileError> },
 }
 
+/// Links an SBPF program from the given source bytecode.
+///
+/// # Arguments
+///
+/// * `source` - A byte slice containing the source bytecode to be linked.
+///
+/// # Returns
+///
+/// * `Ok(Vec<u8>)` - A vector of bytes representing the linked program's bytecode.
+/// * `Err(SbpfLinkerError)` - An error that occurred during the linking process.
+///
+/// # Errors
+///
+/// This function can return the following errors:
+///
+/// * `SbpfLinkerError::ObjectFileOpenError` - If opening the object file fails.
+/// * `SbpfLinkerError::ObjectFileReadError` - If reading the object file fails.
+/// * `SbpfLinkerError::LinkerError` - If an error occurs during the linking process.
+/// * `SbpfLinkerError::LlvmDiagnosticError` - If LLVM issues a diagnostic with error severity.
+/// * `SbpfLinkerError::BuildProgramError` - If building the program fails.
 pub fn link_program(source: &[u8]) -> Result<Vec<u8>, SbpfLinkerError> {
     let parse_result = parse_bytecode(source)?;
     let program = Program::from_parse_result(parse_result);
