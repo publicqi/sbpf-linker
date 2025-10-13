@@ -12,7 +12,9 @@ use sbpf_linker::{SbpfLinkerError, link_program};
 
 #[derive(Debug, thiserror::Error)]
 enum CliError {
-    #[error("optimization level needs to be between 0-3, s or z (instead was `{0}`)")]
+    #[error(
+        "optimization level needs to be between 0-3, s or z (instead was `{0}`)"
+    )]
     InvalidOptimization(String),
     #[error("SBPF Linker Error. Error detail: ({0}).")]
     SbpfLinkerError(#[from] SbpfLinkerError),
@@ -60,8 +62,8 @@ struct CommandLine {
     #[clap(long)]
     btf: bool,
 
-    /// Permit automatic insertion of __bpf_trap calls.
-    /// See: https://github.com/llvm/llvm-project/commit/ab391beb11f733b526b86f9df23734a34657d876
+    /// Permit automatic insertion of `__bpf_trap` calls.
+    /// See: <https://github.com/llvm/llvm-project/commit/ab391beb11f733b526b86f9df23734a34657d876>
     #[clap(long)]
     allow_bpf_trap: bool,
 
@@ -97,7 +99,7 @@ struct CommandLine {
     #[clap(long)]
     disable_expand_memcpy_in_order: bool,
 
-    /// Disable exporting memcpy, memmove, memset, memcmp and bcmp. Exporting
+    /// Disable exporting `memcpy`, `memmove`, `memset`, `memcmp` and `bcmp`. Exporting
     /// those is commonly needed when LLVM does not manage to expand memory
     /// intrinsics to a sequence of loads and stores.
     #[clap(long)]
@@ -122,11 +124,7 @@ struct CommandLine {
 
 fn main() -> Result<(), CliError> {
     let args = env::args().map(|arg| {
-        if arg == "-flavor" {
-            "--flavor".to_string()
-        } else {
-            arg
-        }
+        if arg == "-flavor" { "--flavor".to_string() } else { arg }
     });
 
     let CommandLine {
@@ -158,10 +156,10 @@ fn main() -> Result<(), CliError> {
         },
     };
 
-    let export_symbols = export_symbols
-        .map(fs::read_to_string)
-        .transpose()
-        .map_err(|e| CliError::SbpfLinkerError(SbpfLinkerError::ObjectFileReadError(e)))?;
+    let export_symbols =
+        export_symbols.map(fs::read_to_string).transpose().map_err(|e| {
+            CliError::SbpfLinkerError(SbpfLinkerError::ObjectFileReadError(e))
+        })?;
 
     // TODO: the data is owned by this call frame; we could make this zero-alloc.
     let export_symbols = export_symbols
@@ -181,7 +179,7 @@ fn main() -> Result<(), CliError> {
     let mut linker = Linker::new(LinkerOptions {
         target: Some("bpf".to_string()),
         cpu,
-        cpu_features: "".to_string(),
+        cpu_features: String::new(),
         inputs,
         output: output.clone(),
         output_type: OutputType::Object,
@@ -201,9 +199,9 @@ fn main() -> Result<(), CliError> {
         allow_bpf_trap,
     });
 
-    linker
-        .link()
-        .map_err(|e| CliError::SbpfLinkerError(SbpfLinkerError::LinkerError(e)))?;
+    linker.link().map_err(|e| {
+        CliError::SbpfLinkerError(SbpfLinkerError::LinkerError(e))
+    })?;
 
     if fatal_errors && linker.has_errors() {
         return Err(CliError::SbpfLinkerError(
@@ -211,9 +209,10 @@ fn main() -> Result<(), CliError> {
         ));
     }
 
-    let program =
-        std::fs::read(&output).map_err(|e| CliError::ProgramReadError { msg: e.to_string() })?;
-    let bytecode = link_program(&program).map_err(CliError::SbpfLinkerError)?;
+    let program = std::fs::read(&output)
+        .map_err(|e| CliError::ProgramReadError { msg: e.to_string() })?;
+    let bytecode =
+        link_program(&program).map_err(CliError::SbpfLinkerError)?;
 
     let src_name = std::path::Path::new(&output)
         .file_stem()
@@ -222,7 +221,7 @@ fn main() -> Result<(), CliError> {
     let output_path = std::path::Path::new(&output)
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."))
-        .join(format!("{}.so", src_name));
+        .join(format!("{src_name}.so"));
     std::fs::write(output_path, bytecode)
         .map_err(|e| CliError::ProgramWriteError { msg: e.to_string() })?;
 
