@@ -831,7 +831,6 @@ dependencies = [
 name = "sbpf-linker"
 version = "0.1.3"
 dependencies = [
- "anyhow",
  "aya-rustc-llvm-proxy",
  "bpf-linker",
  "clap",
