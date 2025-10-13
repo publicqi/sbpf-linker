@@ -62,9 +62,9 @@ struct CommandLine {
     #[clap(long)]
     btf: bool,
 
-    /// Permit automatic insertion of __`bpf_trap` calls.
+    /// Permit automatic insertion of `__bpf_trap` calls.
     /// See: <https://github.com/llvm/llvm-project/commit/ab391beb11f733b526b86f9df23734a34657d876>
-    #[clap(long)]
+    #[clap(long, hide = true)]
     allow_bpf_trap: bool,
 
     /// Add a directory to the library search path
@@ -80,11 +80,11 @@ struct CommandLine {
     export_symbols: Option<PathBuf>,
 
     /// Try hard to unroll loops. Useful when targeting kernels that don't support loops
-    #[clap(long)]
+    #[clap(long, hide = true)]
     unroll_loops: bool,
 
     /// Ignore `noinline`/`#[inline(never)]`. Useful when targeting kernels that don't support function calls
-    #[clap(long)]
+    #[clap(long, hide = true)]
     ignore_inline_never: bool,
 
     /// Dump the final IR module to the given `path` before generating the code
@@ -92,17 +92,17 @@ struct CommandLine {
     dump_module: Option<PathBuf>,
 
     /// Extra command line arguments to pass to LLVM
-    #[clap(long, value_name = "args", use_value_delimiter = true, action = clap::ArgAction::Append)]
+    #[clap(long, value_name = "args", use_value_delimiter = true, action = clap::ArgAction::Append, hide = true)]
     llvm_args: Vec<CString>,
 
     /// Disable passing --bpf-expand-memcpy-in-order to LLVM.
-    #[clap(long)]
+    #[clap(long, hide = true)]
     disable_expand_memcpy_in_order: bool,
 
     /// Disable exporting `memcpy`, `memmove`, `memset`, `memcmp` and `bcmp`. Exporting
     /// those is commonly needed when LLVM does not manage to expand memory
     /// intrinsics to a sequence of loads and stores.
-    #[clap(long)]
+    #[clap(long, hide = true)]
     disable_memory_builtins: bool,
 
     /// Input files. Can be object files or static libraries
@@ -114,7 +114,7 @@ struct CommandLine {
     export: Vec<String>,
 
     /// Whether to treat LLVM errors as fatal.
-    #[clap(long, action = clap::ArgAction::Set, default_value_t = true)]
+    #[clap(long, action = clap::ArgAction::Set, default_value_t = true, hide = true)]
     fatal_errors: bool,
 
     // The options below are for wasm-ld compatibility
