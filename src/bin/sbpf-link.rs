@@ -1,14 +1,13 @@
-use std::path::{Path, PathBuf};
-use std::fs;
 use clap::Parser;
-use sbpf_linker::link_program;
+use sbpf_linker::{SbpfLinkerError, link_program};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Links an object file by reading it from the given path and processing its bytecode
-fn link_object_file<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, String> {
+fn link_object_file<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, SbpfLinkerError> {
     // Read the object file into a byte array
-    let bytes = fs::read(path.as_ref())
-        .map_err(|e| format!("Failed to read object file: {}", e))?;
-    
+    let bytes = fs::read(path.as_ref())?;
+
     // Call link_program on the bytes
     link_program(&bytes)
 }
@@ -30,12 +29,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Link the object file
     println!("Linking: {}", args.input.display());
-    let linked_bytecode = link_object_file(&args.input)
-        .map_err(|e| format!("Failed to link object file: {}", e))?;
+    let linked_bytecode =
+        link_object_file(&args.input).map_err(|e| format!("Failed to link object file: {}", e))?;
 
     // Determine output path in same directory with .so extension
     let parent = args.input.parent().unwrap_or_else(|| Path::new("."));
-    let stem = args.input.file_stem()
+    let stem = args
+        .input
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("output");
     let output = parent.join(format!("{}.so", stem));
@@ -47,4 +48,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Successfully linked {} bytes", linked_bytecode.len());
     Ok(())
 }
-
