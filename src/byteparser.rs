@@ -12,55 +12,6 @@ use std::collections::HashMap;
 
 use crate::SbpfLinkerError;
 
-/// Parses the given bytecode and constructs an Abstract Syntax Tree (AST) representation
-/// of the program. The function processes the `.rodata` and `.text` sections of the bytecode,
-/// extracting relevant symbols, relocations, and instructions.
-///
-/// # Arguments
-///
-/// * `bytes` - A slice of bytes representing the bytecode to be parsed.
-///
-/// # Returns
-///
-/// Returns a `Result` containing the `ParseResult` on success, or an `SbpfLinkerError` on failure.
-///
-/// # Errors
-///
-/// This function may return the following errors:
-/// * `SbpfLinkerError::BuildProgramError` - If there are errors while building the program.
-/// * Errors from the `object` crate when parsing the bytecode or accessing sections and symbols.
-///
-/// # Details
-///
-/// 1. **`.rodata` Section**:
-///    - Extracts symbols from the `.rodata` section and constructs `ROData` nodes for the AST.
-///    - Builds a `rodata_table` mapping symbol addresses to their names.
-///    - Updates the AST with the size of the `.rodata` section.
-///
-/// 2. **`.text` Section**:
-///    - Parses the `.text` section to extract instructions and builds `Instruction` nodes for the AST.
-///    - Handles relocations for symbols in the `.rodata` section:
-///        - Resolves the relocation target symbol.
-///        - Replaces the immediate value in the instruction with the corresponding `.rodata` label.
-///
-/// 3. **Program Construction**:
-///    - Constructs the final program from the AST and returns the result.
-///
-/// # Example
-///
-/// ```rust
-/// use sbpf_linker::byteparser::parse_bytecode;
-/// 
-/// let bytecode: &[u8] = &[0, 1, 2, 3, 4, 5]; // Example bytecode
-/// match parse_bytecode(bytecode) {
-///     Ok(parse_result) => {
-///         // Use the parse result
-///     }
-///     Err(err) => {
-///         eprintln!("Error parsing bytecode: {:?}", err);
-///     }
-/// }
-/// ```
 pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
     let mut ast = AST::new();
 
