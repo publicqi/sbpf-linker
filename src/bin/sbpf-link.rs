@@ -24,13 +24,12 @@ struct Args {
     input: PathBuf,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), SbpfLinkerError> {
     let args = Args::parse();
 
     // Link the object file
     println!("Linking: {}", args.input.display());
-    let linked_bytecode =
-        link_object_file(&args.input).map_err(|e| format!("Failed to link object file: {}", e))?;
+    let linked_bytecode = link_object_file(&args.input)?;
 
     // Determine output path in same directory with .so extension
     let parent = args.input.parent().unwrap_or_else(|| Path::new("."));
