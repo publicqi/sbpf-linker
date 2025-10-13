@@ -79,12 +79,10 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                         Symbol(sym) => Some(obj.symbol_by_index(sym).unwrap()),
                         _ => None,
                     };
-                    println!("Symbol: {symbol:?}");
 
                     if symbol.unwrap().section_index()
                         == Some(ro_section.index())
                     {
-                        println!("Relocation found");
                         // addend is not explicit in the relocation entry, but implicitly encoded
                         // as the immediate value of the instruction
                         let addend = match ast
