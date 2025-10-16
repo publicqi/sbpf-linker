@@ -5,6 +5,11 @@ version = "0.1.3"
 authors = ["Claire Fan <claire@blueshift.gg>"]
 description = "Upstream BPF linker for SBPF V0 programs"
 license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/blueshift-gg/sbpf-linker"
+repository = "https://github.com/blueshift-gg/sbpf-linker"
+keywords = ["cli", "sbpf", "linker", "solana"]
+categories = ["command-line-utilities"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -16,7 +21,6 @@ sbpf-assembler = "0.1.2"
 sbpf-common = "0.1.2"
 clap = { version = "4.5.13", features = ["derive"] }
 object = "0.37.3"
-anyhow = "1.0"
 bpf-linker = "0.9.15"
 thiserror = "2.0.12"
 

@@ -1,9 +1,4 @@
-use std::{
-    env, fs,
-    ffi::CString,
-    path::PathBuf,
-    str::FromStr,
-};
+use std::{env, ffi::CString, fs, path::PathBuf, str::FromStr};
 
 #[cfg(any(
     feature = "rust-llvm-19",
@@ -11,21 +6,26 @@ use std::{
     feature = "rust-llvm-21"
 ))]
 use aya_rustc_llvm_proxy as _;
-use anyhow::Context;
-use thiserror::Error;
 use bpf_linker::{Cpu, Linker, LinkerOptions, OptLevel, OutputType};
-use clap::{
-    error::ErrorKind,
-    Parser,
-};
-use sbpf_linker::link_program;
+use clap::{Parser, error::ErrorKind};
+use sbpf_linker::{SbpfLinkerError, link_program};
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 enum CliError {
-    #[error("optimization level needs to be between 0-3, s or z (instead was `{0}`)")]
+    #[error(
+        "optimization level needs to be between 0-3, s or z (instead was `{0}`)"
+    )]
     InvalidOptimization(String),
-//     #[error("unknown emission type: `{0}` - expected one of: `llvm-bc`, `asm`, `llvm-ir`, `obj`")]
-//     InvalidOutputType(String),
+    #[error("SBPF Linker Error. Error detail: ({0}).")]
+    SbpfLinkerError(#[from] SbpfLinkerError),
+    #[error("Clap Error. Error detail: ({0}).")]
+    ClapError(#[from] clap::error::Error),
+    #[error("Program Read Error. Error detail: ({msg}).")]
+    ProgramReadError { msg: String },
+    #[error("Program Write Error. Error detail: ({msg}).")]
+    ProgramWriteError { msg: String },
+    //     #[error("unknown emission type: `{0}` - expected one of: `llvm-bc`, `asm`, `llvm-ir`, `obj`")]
+    //     InvalidOutputType(String),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -53,7 +53,7 @@ struct CommandLine {
     /// Target BPF processor. Can be one of `generic`, `probe`, `v1`, `v2`, `v3`
     #[clap(long, default_value = "generic")]
     cpu: Cpu,
-    
+
     /// Write output to <output>
     #[clap(short, long)]
     output: PathBuf,
@@ -62,8 +62,8 @@ struct CommandLine {
     #[clap(long)]
     btf: bool,
 
-    /// Permit automatic insertion of __bpf_trap calls.
-    /// See: https://github.com/llvm/llvm-project/commit/ab391beb11f733b526b86f9df23734a34657d876
+    /// Permit automatic insertion of `__bpf_trap` calls.
+    /// See: <https://github.com/llvm/llvm-project/commit/ab391beb11f733b526b86f9df23734a34657d876>
     #[clap(long)]
     allow_bpf_trap: bool,
 
@@ -99,7 +99,7 @@ struct CommandLine {
     #[clap(long)]
     disable_expand_memcpy_in_order: bool,
 
-    /// Disable exporting memcpy, memmove, memset, memcmp and bcmp. Exporting
+    /// Disable exporting `memcpy`, `memmove`, `memset`, `memcmp` and `bcmp`. Exporting
     /// those is commonly needed when LLVM does not manage to expand memory
     /// intrinsics to a sequence of loads and stores.
     #[clap(long)]
@@ -122,13 +122,9 @@ struct CommandLine {
     _debug: bool,
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), CliError> {
     let args = env::args().map(|arg| {
-        if arg == "-flavor" {
-            "--flavor".to_string()
-        } else {
-            arg
-        }
+        if arg == "-flavor" { "--flavor".to_string() } else { arg }
     });
 
     let CommandLine {
@@ -160,7 +156,10 @@ fn main() -> anyhow::Result<()> {
         },
     };
 
-    let export_symbols = export_symbols.map(fs::read_to_string).transpose()?;
+    let export_symbols =
+        export_symbols.map(fs::read_to_string).transpose().map_err(|e| {
+            CliError::SbpfLinkerError(SbpfLinkerError::ObjectFileReadError(e))
+        })?;
 
     // TODO: the data is owned by this call frame; we could make this zero-alloc.
     let export_symbols = export_symbols
@@ -171,16 +170,16 @@ fn main() -> anyhow::Result<()> {
         .chain(export)
         .map(Into::into)
         .collect();
-    
+
     let optimize = match *optimize.as_slice() {
         [] => unreachable!("emit has a default value"),
         [.., CliOptLevel(optimize)] => optimize,
     };
-    
+
     let mut linker = Linker::new(LinkerOptions {
         target: Some("bpf".to_string()),
         cpu,
-        cpu_features: "".to_string(),
+        cpu_features: String::new(),
         inputs,
         output: output.clone(),
         output_type: OutputType::Object,
@@ -190,24 +189,31 @@ fn main() -> anyhow::Result<()> {
         unroll_loops,
         ignore_inline_never,
         dump_module,
-        llvm_args: llvm_args.into_iter().map(|cstring| cstring.into_string().unwrap_or_default()).collect(),
+        llvm_args: llvm_args
+            .into_iter()
+            .map(|cstring| cstring.into_string().unwrap_or_default())
+            .collect(),
         disable_expand_memcpy_in_order,
         disable_memory_builtins,
         btf,
         allow_bpf_trap,
     });
 
-    linker.link()?;
+    linker.link().map_err(|e| {
+        CliError::SbpfLinkerError(SbpfLinkerError::LinkerError(e))
+    })?;
 
     if fatal_errors && linker.has_errors() {
-        return Err(anyhow::anyhow!(
-            "LLVM issued diagnostic with error severity"
+        return Err(CliError::SbpfLinkerError(
+            SbpfLinkerError::LlvmDiagnosticError,
         ));
     }
 
-    let program = std::fs::read(&output).context("Failed to read bytecode")?;
-    let bytecode = link_program(&program)
-        .map_err(|e| anyhow::anyhow!("Link error: {}", e))?;
+    let program = std::fs::read(&output)
+        .map_err(|e| CliError::ProgramReadError { msg: e.to_string() })?;
+    let bytecode =
+        link_program(&program).map_err(CliError::SbpfLinkerError)?;
+
     let src_name = std::path::Path::new(&output)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -215,8 +221,9 @@ fn main() -> anyhow::Result<()> {
     let output_path = std::path::Path::new(&output)
         .parent()
         .unwrap_or_else(|| std::path::Path::new("."))
-        .join(format!("{}.so", src_name));
-    std::fs::write(output_path, bytecode)?;
+        .join(format!("{src_name}.so"));
+    std::fs::write(output_path, bytecode)
+        .map_err(|e| CliError::ProgramWriteError { msg: e.to_string() })?;
 
     Ok(())
 }
