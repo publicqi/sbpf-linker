@@ -2,8 +2,8 @@ use sbpf_assembler::ast::AST;
 use sbpf_assembler::astnode::{ASTNode, ROData};
 use sbpf_assembler::instruction::Instruction;
 use sbpf_assembler::lexer::{ImmediateValue, Token};
-use sbpf_assembler::opcode::Opcode;
 use sbpf_assembler::parser::ParseResult;
+use sbpf_common::opcode::Opcode;
 
 use object::RelocationTarget::Symbol;
 use object::{File, Object as _, ObjectSection as _, ObjectSymbol as _};
@@ -64,10 +64,15 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                         _ => 8,
                     };
                 let node = &section.data().unwrap()[offset..offset + node_len];
-                ast.nodes.push(ASTNode::Instruction {
-                    instruction: Instruction::from_bytes(node).unwrap(),
-                    offset: offset as u64,
-                });
+                let instruction = Instruction::from_bytes(node);
+                if let Err(error) = instruction {
+                    return Err(error.to_string());
+                } else {
+                    ast.nodes.push(ASTNode::Instruction {
+                        instruction: instruction.unwrap(),
+                        offset: offset as u64,
+                    });
+                }
                 offset += node_len;
             }
 
@@ -79,10 +84,8 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                         Symbol(sym) => Some(obj.symbol_by_index(sym).unwrap()),
                         _ => None,
                     };
-
-                    if symbol.unwrap().section_index()
-                        == Some(ro_section.index())
-                    {
+                
+                    if symbol.unwrap().section_index() == Some(ro_section.index()) {
                         // addend is not explicit in the relocation entry, but implicitly encoded
                         // as the immediate value of the instruction
                         let addend = match ast

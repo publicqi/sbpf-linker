@@ -828,6 +828,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sbpf-common"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39a8ff075e738e3850c291334f6f7e45379ad442366f3f4b1f9f9bf0674fa61d"
+dependencies = [
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
 name = "sbpf-linker"
 version = "0.1.3"
 dependencies = [
@@ -839,6 +849,7 @@ dependencies = [
  "llvm-sys 211.0.0",
  "object",
  "sbpf-assembler",
+ "sbpf-common",
  "thiserror 2.0.17",
  "tracing",
  "tracing-appender",
