@@ -18,6 +18,8 @@ pub enum SbpfLinkerError {
     LlvmDiagnosticError,
     #[error("Build Program Error. Error details: {errors:?}.")]
     BuildProgramError { errors: Vec<CompileError> },
+    #[error("Instruction Parse Error. Error detail: ({0}).")]
+    InstructionParseError(String),
 }
 
 pub fn link_program(source: &[u8]) -> Result<Vec<u8>, SbpfLinkerError> {

@@ -66,7 +66,7 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                 let node = &section.data().unwrap()[offset..offset + node_len];
                 let instruction = Instruction::from_bytes(node);
                 if let Err(error) = instruction {
-                    return Err(error.to_string());
+                    return Err(SbpfLinkerError::InstructionParseError(error.to_string()));
                 } else {
                     ast.nodes.push(ASTNode::Instruction {
                         instruction: instruction.unwrap(),
