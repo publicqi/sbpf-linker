@@ -2,8 +2,8 @@ use sbpf_assembler::ast::AST;
 use sbpf_assembler::astnode::{ASTNode, ROData};
 use sbpf_assembler::instruction::Instruction;
 use sbpf_assembler::lexer::{ImmediateValue, Token};
-use sbpf_assembler::opcode::Opcode;
 use sbpf_assembler::parser::ParseResult;
+use sbpf_common::opcode::Opcode;
 
 use object::{File, Object, ObjectSection, ObjectSymbol};
 use object::RelocationTarget::Symbol;
@@ -54,13 +54,18 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, String> {
                     _ => 8,
                 };
                 let node = &section.data().unwrap()[offset..offset + node_len];
-                ast.nodes.push(ASTNode::Instruction {
-                    instruction: Instruction::from_bytes(node).unwrap(),
-                    offset: offset as u64,
-                });
+                let instruction = Instruction::from_bytes(node);
+                if let Err(error) = instruction {
+                    return Err(error.to_string());
+                } else {
+                    ast.nodes.push(ASTNode::Instruction {
+                        instruction: instruction.unwrap(),
+                        offset: offset as u64,
+                    });
+                }
                 offset += node_len;
             }
-            
+
             if let Some(ro_section) = obj.section_by_name(".rodata") {
                 // handle relocations
                 for rel in section.relocations() {
@@ -69,10 +74,8 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, String> {
                         Symbol(sym) => Some(obj.symbol_by_index(sym).unwrap()), 
                         _ => None
                     };
-                    println!("Symbol: {:?}", symbol);
                 
                     if symbol.unwrap().section_index() == Some(ro_section.index()) {
-                        println!("Relocation found");
                         // addend is not explicit in the relocation entry, but implicitly encoded
                         // as the immediate value of the instruction
                         let addend = //
