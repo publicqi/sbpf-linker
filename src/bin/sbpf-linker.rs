@@ -16,10 +16,10 @@ enum CliError {
         "optimization level needs to be between 0-3, s or z (instead was `{0}`)"
     )]
     InvalidOptimization(String),
+    #[error("Clap Parse Error")]
+    ClapParseError,
     #[error("SBPF Linker Error. Error detail: ({0}).")]
     SbpfLinkerError(#[from] SbpfLinkerError),
-    #[error("Clap Error. Error detail: ({0}).")]
-    ClapError(#[from] clap::error::Error),
     #[error("Program Read Error. Error detail: ({msg}).")]
     ProgramReadError { msg: String },
     #[error("Program Write Error. Error detail: ({msg}).")]
@@ -55,7 +55,7 @@ struct CommandLine {
     cpu: Cpu,
 
     /// Write output to <output>
-    #[clap(short, long)]
+    #[clap(short, long, required = true)]
     output: PathBuf,
 
     /// Emit BTF information
@@ -152,7 +152,11 @@ fn main() -> Result<(), CliError> {
                 print!("{err}");
                 return Ok(());
             }
-            _ => return Err(err.into()),
+            _ => {
+                // Let Clap handle its own error display for better formatting
+                eprintln!("{err}");
+                return Err(CliError::ClapParseError);
+            }
         },
     };
 
