@@ -113,6 +113,10 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                             Token::Identifier(ro_label_name, 0..1);
                     }
                 }
+            } else {
+                if section.relocations().count() > 0 {
+                    assert!(false, "Relocations found but no .rodata section");
+                }
             }
             ast.set_text_size(section.size());
         }
