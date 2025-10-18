@@ -16,8 +16,14 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
     let mut ast = AST::new();
 
     let obj = File::parse(bytes)?;
+
+    // Find rodata section - could be .rodata, .rodata.str1.1, etc.
+    let ro_section = obj.sections().find(|s| {
+        s.name().map(|name| name.starts_with(".rodata")).unwrap_or(false)
+    });
+
     let mut rodata_table = HashMap::new();
-    if let Some(ro_section) = obj.section_by_name(".rodata") {
+    if let Some(ref ro_section) = ro_section {
         // only handle symbols in the .rodata section for now
         let mut rodata_offset = 0;
         for symbol in obj.symbols() {
@@ -76,7 +82,7 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
                 offset += node_len;
             }
 
-            if let Some(ro_section) = obj.section_by_name(".rodata") {
+            if let Some(ref ro_section) = ro_section {
                 // handle relocations
                 for rel in section.relocations() {
                     // only handle relocations for symbols in the .rodata section for now
