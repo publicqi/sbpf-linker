@@ -22,6 +22,12 @@ pub fn parse_bytecode(bytes: &[u8]) -> Result<ParseResult, SbpfLinkerError> {
         s.name().map(|name| name.starts_with(".rodata")).unwrap_or(false)
     });
 
+    // Ensure there's only one .rodata section
+    let rodata_count = obj.sections().filter(|s| {
+        s.name().map(|name| name.starts_with(".rodata")).unwrap_or(false)
+    }).count();
+    assert!(rodata_count <= 1, "Multiple .rodata sections found");
+
     let mut rodata_table = HashMap::new();
     if let Some(ref ro_section) = ro_section {
         // only handle symbols in the .rodata section for now
