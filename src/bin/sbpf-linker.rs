@@ -50,6 +50,10 @@ impl FromStr for CliOptLevel {
 #[derive(Debug, Parser)]
 #[command(version)]
 struct CommandLine {
+    /// LLVM target triple. When not provided, the target is inferred from the inputs
+    #[clap(long)]
+    target: Option<String>,
+
     /// Target BPF processor. Can be one of `generic`, `probe`, `v1`, `v2`, `v3`
     #[clap(long, default_value = "generic")]
     cpu: Cpu,
@@ -128,6 +132,7 @@ fn main() -> Result<(), CliError> {
     });
 
     let CommandLine {
+        target,
         cpu,
         output,
         btf,
@@ -181,7 +186,7 @@ fn main() -> Result<(), CliError> {
     };
 
     let mut linker = Linker::new(LinkerOptions {
-        target: Some("bpf".to_string()),
+        target,
         cpu,
         cpu_features: String::new(),
         inputs,
